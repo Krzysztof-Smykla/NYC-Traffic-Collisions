@@ -66,7 +66,7 @@ def FetchData():
             print(f" DataFrame Shape: {results_df.shape}")  # Should show (n, columns)
 
             # Define output directory and file
-            output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\NYC Traffic project\Data"
+            output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data"
             os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
             output_file = os.path.join(output_dir, "output.csv")
 
@@ -81,7 +81,7 @@ def FetchData():
 FetchData()
 
 # ------------------DATA PREPARATION IN PANDAS------------------------
-output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
+output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data"
 file = os.path.join(output_dir, "output.csv")
 
 try:
