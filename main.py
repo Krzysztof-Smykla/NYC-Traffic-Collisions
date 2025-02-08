@@ -77,8 +77,8 @@ def FetchData():
     return results_df
 
 
-# NYC_Map.Map.DisplayMap()
 FetchData()
+
 
 # ------------------DATA PREPARATION IN PANDAS------------------------
 output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data"
@@ -101,15 +101,7 @@ except FileNotFoundError:
 except Exception as e:
     print(f"Error processing data: {e}")
 
-r"""
-# Permissions Test:
-test_path = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
-try:
-    with open(test_path, "w") as f:
-        f.write("Test file created successfully!")
-    print(f"Test file created at {test_path}")
-except Exception as e:
-    print(f"Failed to write test file: {e}")
-"""
 
 print(results_df)
+
+

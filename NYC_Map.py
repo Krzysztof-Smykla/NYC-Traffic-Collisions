@@ -1,10 +1,11 @@
 import folium
 import os
+import webbrowser
 
 
 class Map:
     @staticmethod
-    def DisplayMap():
+    def GenerateMap():
         try:
             # Define map center coordinates for NYC
             nyc_coordinates = (40.7128, -74.0060)
@@ -31,5 +32,20 @@ class Map:
             else:
                 print("Error: Map file not found. Please check the file path.")
 
+            return path
         except Exception as e:
             print(f"Could not display map: {e}")
+
+            return None
+
+    @classmethod
+    def DisplayMap(cls, map_path):
+        if map_path and os.path.exists(map_path):
+            webbrowser.open(map_path)
+        else:
+            print("Error: Map file not found or path is invalid.")
+
+url = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data\output_clean"
+
+map_file = Map.GenerateMap()
+Map.DisplayMap(map_file)
