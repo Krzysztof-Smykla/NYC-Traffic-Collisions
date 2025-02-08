@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import NYC_Map
+import folium
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -35,19 +36,19 @@ def FetchData():
 
     total_records = 0
     results = []
-    batch_size = 1000 # Maximum limit per request
+    batch_size = 1000  # Maximum limit per request
 
     # Determine number of batches
 
-    num_batches = (n // batch_size) + (1 if n % batch_size !=0 else 0)
-    offsets = [i*batch_size for i in range(num_batches)]
+    num_batches = (n // batch_size) + (1 if n % batch_size != 0 else 0)
+    offsets = [i * batch_size for i in range(num_batches)]
 
     print(f"Fetching {n} records in {num_batches} parallel requests...")
 
     # Use ThreadPoolExecutor fof parallel API requests
-    with ThreadPoolExecutor(max_workers=5) as executor: # Adjust workers if needed
+    with ThreadPoolExecutor(max_workers=5) as executor:  # Adjust workers if needed
         future_to_offset = {executor.submit(fetch_batch, url, batch_size, offset):
-                            offset for offset in offsets}
+                                offset for offset in offsets}
 
         for future in as_completed(future_to_offset):
             batch = future.result()
@@ -62,26 +63,53 @@ def FetchData():
     print(f" Fetched {len(results)} records.")
 
     if results:
-            results_df = pd.DataFrame(results)
-            print(f" DataFrame Shape: {results_df.shape}")  # Should show (n, columns)
+        results_df = pd.DataFrame(results)
+        print(f" DataFrame Shape: {results_df.shape}")  # Should show (n, columns)
 
-            # Define output directory and file
-            output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data"
-            os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
-            output_file = os.path.join(output_dir, "output.csv")
+        # Define output directory and file
+        output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
+        os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
+        output_file = os.path.join(output_dir, "output.csv")
 
-            # Save DataFrame to CSV
-            results_df.to_csv(output_file, index=False)
-            print(f"✅ Data successfully saved to {output_file}")
+        # Save DataFrame to CSV
+        results_df.to_csv(output_file, index=False)
+        print(f"✅ Data successfully saved to {output_file}")
 
     return results_df
 
 
+m = NYC_Map.Map.GenerateMap()  # variable with the folium map
+
+
+def PopulateMap(clean):
+    extension = os.path.splitext(clean)[1]  # Extracts the extension
+    if extension.lower() == ".csv":
+        print("This is a CSV file.")
+        pd.read_csv(clean)
+        # Ensure columns exist
+        if "latitude" not in df.columns or "longitude" not in df.columns:
+            raise ValueError("CSV file must contain 'latitude' and 'longitude' columns.")
+
+        # Add markers for each row
+        for _, row in df.iterrows():
+            folium.Marker(
+                location=[row["latitude"], row["longitude"]],
+                popup=row["name"],  # Show name on click
+                tooltip=row["name"],  # Show name on hover
+                icon=folium.Icon(color="blue", icon="info-sign")  # Customize marker
+            ).add_to(m)
+
+        # Save map to file
+        map_file = "nyc_map.html"
+        m.save(map_file)
+    else:
+        print("This is NOT a CSV file.")
+        return 0
+
+
 FetchData()
-
-
 # ------------------DATA PREPARATION IN PANDAS------------------------
-output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data"
+output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
 file = os.path.join(output_dir, "output.csv")
 
 try:
@@ -93,15 +121,26 @@ try:
         print("Dropped 'location' column.")
 
     output_file = os.path.join(output_dir, 'output_clean.csv')
-    df.to_csv(output_file, index=False)
-    print(f"Modified DataFrame saved to {output_file}")
+
+    if os.path.exists(output_file):  # check if the file output_clean.csv already exists
+        print("File already exists.")
+    else:
+        df.to_csv(output_file, index=False)
+        print(f"Modified DataFrame saved to {output_file}")
+
 
 except FileNotFoundError:
     print(f"Error: {file} not found. Make sure FetchData() ran successfully.")
+
 except Exception as e:
     print(f"Error processing data: {e}")
 
-
 print(results_df)
+# -----------------------------------------------
 
+file = open(r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data\output_clean.csv",
+            "r")
 
+# print(file.read())
+
+PopulateMap(file)
