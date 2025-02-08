@@ -45,7 +45,5 @@ class Map:
         else:
             print("Error: Map file not found or path is invalid.")
 
-url = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic\Data\output_clean"
-
 map_file = Map.GenerateMap()
 Map.DisplayMap(map_file)
