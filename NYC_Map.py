@@ -14,7 +14,7 @@ class Map:
             m = folium.Map(location=nyc_coordinates, zoom_start=12)
 
             # Define the directory and file name
-            directory = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\NYC Traffic project\Data"
+            directory = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
             file_name = "nyc_map.html"
 
             # Ensure the directory exists
@@ -44,6 +44,7 @@ class Map:
             webbrowser.open(map_path)
         else:
             print("Error: Map file not found or path is invalid.")
+
 
 map_file = Map.GenerateMap()
 Map.DisplayMap(map_file)
