@@ -5,21 +5,19 @@ import folium
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# 🔹 Define Global Directory for Reusability
+BASE_DIR = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
+
 
 def fetch_batch(url, limit, offset):
-    '''' Fetch a single batch of data from the API'''
+    ''' Fetch a single batch of data from the API '''
     params = {
         "$limit": limit,
         "$offset": offset,
         "$order": "crash_date DESC"
     }
     response = requests.get(url, params=params)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error: {response.status_code} - {response.text} ")
-        return []
+    return response.json() if response.status_code == 200 else []
 
 
 def FetchData():
@@ -31,116 +29,102 @@ def FetchData():
         if n <= 0:
             raise ValueError("Number of samples cannot be zero or negative.")
     except ValueError as ve:
-        print(f"Input error: {ve}")
+        print(f"❌ Input error: {ve}")
         return None
 
-    total_records = 0
-    results = []
-    batch_size = 1000  # Maximum limit per request
+    total_records, results = 0, []
+    batch_size = 1000
+    offsets = [i * batch_size for i in range((n // batch_size) + (1 if n % batch_size != 0 else 0))]
 
-    # Determine number of batches
+    print(f"Fetching {n} records...")
 
-    num_batches = (n // batch_size) + (1 if n % batch_size != 0 else 0)
-    offsets = [i * batch_size for i in range(num_batches)]
-
-    print(f"Fetching {n} records in {num_batches} parallel requests...")
-
-    # Use ThreadPoolExecutor fof parallel API requests
-    with ThreadPoolExecutor(max_workers=5) as executor:  # Adjust workers if needed
-        future_to_offset = {executor.submit(fetch_batch, url, batch_size, offset):
-                                offset for offset in offsets}
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_offset = {executor.submit(fetch_batch, url, batch_size, offset): offset for offset in offsets}
 
         for future in as_completed(future_to_offset):
             batch = future.result()
             results.extend(batch)
             total_records += len(batch)
-
-            # ✅ Fix: Stop only if we have at least `n` records
             if total_records >= n:
-                results = results[:n]  # Ensure we don't exceed `n`
+                results = results[:n]
                 break
 
-    print(f" Fetched {len(results)} records.")
+    print(f"✅ Fetched {len(results)} records.")
 
     if results:
         results_df = pd.DataFrame(results)
-        print(f" DataFrame Shape: {results_df.shape}")  # Should show (n, columns)
-
-        # Define output directory and file
-        output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
-        os.makedirs(output_dir, exist_ok=True)  # Ensure directory exists
-        output_file = os.path.join(output_dir, "output.csv")
-
-        # Save DataFrame to CSV
+        output_file = os.path.join(BASE_DIR, "output.csv")
         results_df.to_csv(output_file, index=False)
         print(f"✅ Data successfully saved to {output_file}")
 
     return results_df
 
 
-m = NYC_Map.Map.GenerateMap()  # variable with the folium map
-
-
 def PopulateMap(clean):
-    extension = os.path.splitext(clean)[1]  # Extracts the extension
-    if extension.lower() == ".csv":
-        print("This is a CSV file.")
-        pd.read_csv(clean)
-        # Ensure columns exist
-        if "latitude" not in df.columns or "longitude" not in df.columns:
-            raise ValueError("CSV file must contain 'latitude' and 'longitude' columns.")
-
-        # Add markers for each row
-        for _, row in df.iterrows():
-            folium.Marker(
-                location=[row["latitude"], row["longitude"]],
-                popup=row["name"],  # Show name on click
-                tooltip=row["name"],  # Show name on hover
-                icon=folium.Icon(color="blue", icon="info-sign")  # Customize marker
-            ).add_to(m)
-
-        # Save map to file
-        map_file = "nyc_map.html"
-        m.save(map_file)
-    else:
-        print("This is NOT a CSV file.")
+    if os.path.splitext(clean)[1].lower() != ".csv":
+        print("❌ This is NOT a CSV file.")
         return 0
 
+    df = pd.read_csv(clean)
 
+    # ✅ Handle missing latitude/longitude
+    if "latitude" in df.columns and "longitude" in df.columns:
+        df = df.dropna(subset=["latitude", "longitude"])
+        df["latitude"] = df["latitude"].astype(float)
+        df["longitude"] = df["longitude"].astype(float)
+    elif "location" in df.columns:
+        df[["latitude", "longitude"]] = df["location"].str.strip("()").str.split(",", expand=True).astype(float)
+        df.drop(columns=["location"], inplace=True)
+    else:
+        raise ValueError("❌ CSV must contain 'latitude' and 'longitude'.")
+
+    # ✅ Generate the map
+    m = NYC_Map.Map.GenerateMap()
+    if not isinstance(m, folium.Map):
+        raise TypeError("❌ 'm' is not a valid Folium map object.")
+
+    # ✅ Add Markers
+    for _, row in df.iterrows():
+        popup_text = row["name"] if "name" in df.columns else "Unknown Location"
+        tooltip_text = row["name"] if "name" in df.columns else "Unknown Location"
+
+        folium.Marker(
+            location=[row["latitude"], row["longitude"]],
+            popup=popup_text,
+            tooltip=tooltip_text,
+            icon=folium.Icon(color="blue", icon="info-sign")
+        ).add_to(m)
+
+    map_file = os.path.join(BASE_DIR, "nyc_map.html")
+    m.save(map_file)
+    print(f"✅ Map updated and saved to {map_file}")
+
+    return m  # Return the map object instead of the file path
+
+
+# 🔹 Fetch Data and Clean It
 FetchData()
-# ------------------DATA PREPARATION IN PANDAS------------------------
-output_dir = r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data"
-file = os.path.join(output_dir, "output.csv")
+output_csv = os.path.join(BASE_DIR, "output.csv")
 
 try:
-    df = pd.read_csv(file, delimiter=',', header=0, encoding='utf-8')
-    print("Original DataFrame loaded successfully.")
+    df = pd.read_csv(output_csv, encoding='utf-8')
+    print("✅ Original DataFrame loaded successfully.")
 
     if 'location' in df.columns:
         df.drop(columns='location', inplace=True)
-        print("Dropped 'location' column.")
+        print("✅ Dropped 'location' column.")
 
-    output_file = os.path.join(output_dir, 'output_clean.csv')
-
-    if os.path.exists(output_file):  # check if the file output_clean.csv already exists
-        print("File already exists.")
-    else:
-        df.to_csv(output_file, index=False)
-        print(f"Modified DataFrame saved to {output_file}")
-
+    output_clean = os.path.join(BASE_DIR, 'output_clean.csv')
+    if not os.path.exists(output_clean):
+        df.to_csv(output_clean, index=False)
+        print(f"✅ Cleaned DataFrame saved to {output_clean}")
 
 except FileNotFoundError:
-    print(f"Error: {file} not found. Make sure FetchData() ran successfully.")
-
+    print(f"❌ Error: {output_csv} not found. Make sure FetchData() ran successfully.")
 except Exception as e:
-    print(f"Error processing data: {e}")
+    print(f"❌ Error processing data: {e}")
 
-print(results_df)
-# -----------------------------------------------
-
-file = open(r"C:\Users\user\Documents\My stuff\Hobbies\Programming\Projects\NYC Traffic project\Data\output_clean.csv",
-            "r")
-
-# print(file.read())
-
-PopulateMap(file)
+# 🔹 Generate and Display map
+m = PopulateMap(output_clean)  # Now we get the map object directly from PopulateMap
+if m:
+    NYC_Map.Map.DisplayMap(m)  # Use the map object `m` for display
